@@ -77,7 +77,7 @@ class Monitor:
     _client_lock = asyncio.Lock()
     _client_connected = True
     _critical_error = False
-    _last_client_refresh = datetime.min
+    _last_client_refresh = datetime.min.replace(tzinfo=timezone.utc)
     _not_logged_count = 0
 
     def __init__(
