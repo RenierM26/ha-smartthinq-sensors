@@ -567,8 +567,12 @@ class LGEDevice:
                 capability_registry=capability_registry,
                 data_source_router=data_source_router,
                 base_polling_interval=scan_interval,
-                mqtt_healthy_interval=timedelta(seconds=90),
+                mqtt_healthy_interval=scan_interval,
                 mqtt_unhealthy_interval=scan_interval,
+                offline_community_refresh_interval=max(
+                    scan_interval,
+                    timedelta(minutes=15),
+                ),
             )
             get_hybrid_coordinators(self._hass)[self._device_id] = coordinator
         else:

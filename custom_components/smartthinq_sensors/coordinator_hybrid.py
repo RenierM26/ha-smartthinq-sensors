@@ -85,7 +85,7 @@ class HybridDataCoordinator(DataUpdateCoordinator):
         mqtt_unhealthy_interval: timedelta = timedelta(seconds=15),
         mqtt_healthy_community_refresh_interval: timedelta = timedelta(minutes=10),
         mqtt_fully_official_refresh_interval: timedelta = timedelta(minutes=30),
-        offline_community_refresh_interval: timedelta = timedelta(minutes=1),
+        offline_community_refresh_interval: timedelta = timedelta(minutes=15),
     ) -> None:
         """Initialize hybrid coordinator."""
         super().__init__(
@@ -132,7 +132,7 @@ class HybridDataCoordinator(DataUpdateCoordinator):
         self._pending_mqtt_refresh_unsub: CALLBACK_TYPE | None = None
         self._last_forced_mqtt_refresh: datetime | None = None
         self._mqtt_refresh_delay = timedelta(seconds=8)
-        self._mqtt_refresh_cooldown = timedelta(seconds=45)
+        self._mqtt_refresh_cooldown = timedelta(minutes=5)
 
     def get_mqtt_health(self) -> dict[str, Any]:
         """Get MQTT health status."""
@@ -251,7 +251,7 @@ class HybridDataCoordinator(DataUpdateCoordinator):
         if profile is None:
             return False
 
-        recent_cutoff = utcnow() - self._current_polling_interval
+        recent_cutoff = utcnow() - self._community_refresh_interval()
         return any(
             capability.official_timestamp is not None
             and capability.official_timestamp >= recent_cutoff
