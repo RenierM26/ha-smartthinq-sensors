@@ -149,7 +149,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception:  # noqa: BLE001
         if log_info:
             _LOGGER.warning(
-                "Connection not available. ThinQ platform not ready", exc_info=True
+                "Connection not available. ThinQ platform not ready", exc_info=exc
             )
         await client.close()
         return True
