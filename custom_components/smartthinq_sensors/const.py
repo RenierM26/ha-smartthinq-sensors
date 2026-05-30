@@ -1,6 +1,6 @@
 """Constants for LGE ThinQ custom component."""
 
-__version__ = "0.42.2"
+__version__ = "0.43.0"
 PROJECT_URL = "https://github.com/ollo69/ha-smartthinq-sensors/"
 ISSUE_URL = f"{PROJECT_URL}issues"
 
@@ -8,7 +8,7 @@ DOMAIN = "smartthinq_sensors"
 OFFICIAL_CLIENT_PREFIX = "home-assistant"
 
 MIN_HA_MAJ_VER = 2025
-MIN_HA_MIN_VER = 1
+MIN_HA_MIN_VER = 7
 __min_ha_version__ = f"{MIN_HA_MAJ_VER}.{MIN_HA_MIN_VER}.0"
 
 # general sensor attributes
@@ -40,6 +40,11 @@ CONF_OAUTH2_URL = "oauth2_url"
 CONF_USE_API_V2 = "use_api_v2"
 CONF_USE_HA_SESSION = "use_ha_session"
 CONF_USE_REDIRECT = "use_redirect"
+
+CONF_SCAN_INTERVAL = "scan_interval"
+DEFAULT_SCAN_INTERVAL = 300
+MIN_SCAN_INTERVAL = 30
+MAX_SCAN_INTERVAL = 3600
 
 CLIENT = "client"
 LGE_DEVICES = "lge_devices"

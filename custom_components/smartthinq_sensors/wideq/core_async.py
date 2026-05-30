@@ -252,9 +252,7 @@ class CoreAsync:
 
         hash_object = hashlib.sha256()
         hash_object.update(
-            (user_number + datetime.now(UTC).strftime("%Y%m%d%H%M%S")).encode(
-                "utf8"
-            )
+            (user_number + datetime.now(UTC).strftime("%Y%m%d%H%M%S")).encode("utf8")
         )
         self._client_id = hash_object.hexdigest()
         if self._update_clientid_callback is not None:
@@ -275,7 +273,7 @@ class CoreAsync:
         # if fails, we try to convert text from xml to json
         try:
             return dict(xmltodict.parse(resp_text))
-        except (TypeError, ExpatError):
+        except TypeError, ExpatError:
             raise exc.InvalidResponseError(resp_text) from None
 
     @staticmethod
@@ -344,7 +342,6 @@ class CoreAsync:
             timeout=self._timeout,
         ) as resp:
             return await resp.content.read()
-
 
     async def thinq2_get(
         self,
@@ -485,7 +482,6 @@ class CoreAsync:
         _LOGGER.debug("Extracting OAuth url from gateway info")
         oauth_base = None
         if gateway_v2_info and isinstance(gateway_v2_info, dict):
-
             lang_pack = None
             if uris := gateway_v2_info.get(V2_GATEWAY_URI_KEY):
                 if isinstance(uris, dict):
@@ -643,9 +639,7 @@ class CoreAsync:
         ) as resp:
             secret_data = cast(
                 dict[str, Any],
-                json.loads(
-                await resp.text()
-                ),
+                json.loads(await resp.text()),
             )  # this return data as plain/text
 
         _LOGGER.debug("auth_user_login - secret_data: %s", secret_data)
@@ -905,7 +899,6 @@ class Gateway:
             )
         )
 
-
     def dump(self) -> dict:
         """Dump the gateway objet."""
         return {
@@ -939,9 +932,9 @@ class Auth:
         )
         self.user_number = user_number
         self._token_created_on = (
-            datetime.now(timezone.utc)
+            datetime.now(UTC)
             if access_token
-            else datetime.min.replace(tzinfo=timezone.utc)
+            else datetime.min.replace(tzinfo=UTC)
         )
 
     @property
@@ -1154,7 +1147,9 @@ class Session:
         self._auth = await self._auth.refresh()
         return self._auth
 
-    async def post(self, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def post(
+        self, path: str, data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Make a POST request to the APIv1 server.
 
         This is like `lgedm_post`, but it pulls the context for the
@@ -1170,7 +1165,9 @@ class Session:
             is_api_v2=False,
         )
 
-    async def post2(self, path: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
+    async def post2(
+        self, path: str, data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """Make a POST request to the APIv2 server.
 
         This is like `lgedm_post`, but it pulls the context for the
@@ -1238,7 +1235,11 @@ class Session:
                 self._common_lang_pack_url = dashboard[_COMMON_LANG_URI_ID]
             else:
                 self._common_lang_pack_url = self._auth.gateway.core.lang_pack_url
-        return [item for item in as_list(dashboard.get("devices", [])) if isinstance(item, dict)]
+        return [
+            item
+            for item in as_list(dashboard.get("devices", []))
+            if isinstance(item, dict)
+        ]
 
     async def get_devices_homes(self) -> list[dict[str, Any]] | None:
         """Get a list of devices associated with the user's account.
@@ -1270,7 +1271,11 @@ class Session:
                 self._common_lang_pack_url = dashboard[_COMMON_LANG_URI_ID]
             else:
                 self._common_lang_pack_url = self._auth.gateway.core.lang_pack_url
-        return [item for item in as_list(dashboard.get("item", [])) if isinstance(item, dict)]
+        return [
+            item
+            for item in as_list(dashboard.get("item", []))
+            if isinstance(item, dict)
+        ]
 
     async def get_devices(self) -> list[dict[str, Any]] | None:
         """Get a list of devices associated with the user's account.
@@ -1491,7 +1496,7 @@ class ClientAsync:
         try:
             with data_file.open(encoding="utf-8") as emu_dev:
                 device_v2 = cast(list[dict[str, Any]], json.load(emu_dev))
-        except (FileNotFoundError, json.JSONDecodeError):
+        except FileNotFoundError, json.JSONDecodeError:
             self._emulation = False
             return None
         return device_v2
@@ -1767,7 +1772,7 @@ class ClientAsync:
                     if detected_content is not None
                     else str(content, errors="replace")
                 )
-            except (LookupError, TypeError):
+            except LookupError, TypeError:
                 # A LookupError is raised if the encoding was not found which could
                 # indicate a misspelling or similar mistake.
                 #
@@ -1813,7 +1818,7 @@ class ClientAsync:
             try:
                 with data_file.open(encoding="utf-8") as lang_file:
                     return cast(dict[str, dict[str, str]], json.load(lang_file))
-            except (FileNotFoundError, json.JSONDecodeError):
+            except FileNotFoundError, json.JSONDecodeError:
                 return {}
 
         lang_pack = await asyncio.to_thread(_load_local_lang_pack)

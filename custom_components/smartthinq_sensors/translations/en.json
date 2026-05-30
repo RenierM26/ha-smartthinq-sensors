@@ -72,6 +72,24 @@
     },
     "title": "SmartThinQ LGE Sensors"
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "SmartThinQ options",
+        "description": "How often the integration polls the LG cloud, in seconds. Default is 300 seconds. Lower values risk a 24-hour LG account block.",
+        "data": {
+          "scan_interval": "Scan interval"
+        }
+      }
+    }
+  },
+  "entity": {
+    "number": {
+      "scan_interval": {
+        "name": "Scan interval"
+      }
+    }
+  },
   "issues": {
     "missing_official_pat": {
       "title": "{title} is running without an LG official PAT",

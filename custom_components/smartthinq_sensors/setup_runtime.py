@@ -22,6 +22,7 @@ from .const import (
     CONF_OAUTH2_URL,
     CONF_OFFICIAL_CLIENT_ID,
     CONF_OFFICIAL_PAT,
+    CONF_SCAN_INTERVAL,
     DOMAIN,
     LGE_DEVICES,
     OFFICIAL_CLIENT_PREFIX,
@@ -200,6 +201,7 @@ def store_entry_runtime_data(
     router = domain_data[DATA_SOURCE_ROUTER]
     hybrid_coordinators = domain_data[HYBRID_COORDINATORS]
     reload_signal = domain_data.get(SIGNAL_RELOAD_ENTRY)
+    scan_interval = domain_data.get(CONF_SCAN_INTERVAL)
     hass.data[DOMAIN] = {
         CLIENT: client,
         LGE_DEVICES: lge_devices,
@@ -210,6 +212,8 @@ def store_entry_runtime_data(
         DATA_SOURCE_ROUTER: router,
         HYBRID_COORDINATORS: hybrid_coordinators,
     }
+    if scan_interval is not None:
+        hass.data[DOMAIN][CONF_SCAN_INTERVAL] = scan_interval
     if reload_signal is not None:
         hass.data[DOMAIN][SIGNAL_RELOAD_ENTRY] = reload_signal
 

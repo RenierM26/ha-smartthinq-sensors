@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
 
 from aiohttp import ClientError
@@ -27,10 +28,14 @@ from .community_setup import (
     start_devices_discovery,
 )
 from .const import (
+    CLIENT,
     CONF_LANGUAGE,
+    CONF_SCAN_INTERVAL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    LGE_DEVICES,
     LGE_OFFICIAL_DISCOVERY,
     SIGNAL_RELOAD_ENTRY,
     __min_ha_version__,
@@ -57,6 +62,7 @@ SMARTTHINQ_PLATFORMS = [
     Platform.FAN,
     Platform.HUMIDIFIER,
     Platform.LIGHT,
+    Platform.NUMBER,
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
@@ -105,19 +111,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     domain_data, log_info = prepare_runtime_context(
         hass, region=region, language=language
     )
-
-    client = await async_create_community_client(
-        hass,
-        entry,
-        region=region,
-        language=language,
-        refresh_token=refresh_token,
-        oauth2_url=oauth2_url,
-        client_id=client_id,
-        use_ha_session=use_ha_session,
-        log_info=log_info,
-        domain_key=DOMAIN,
+    domain_data[CONF_SCAN_INTERVAL] = int(
+        entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
     )
+    await hass.config_entries.async_forward_entry_setups(entry, [Platform.NUMBER])
+    entry.async_on_unload(entry.add_update_listener(_options_update_listener))
+
+    try:
+        client = await async_create_community_client(
+            hass,
+            entry,
+            region=region,
+            language=language,
+            refresh_token=refresh_token,
+            oauth2_url=oauth2_url,
+            client_id=client_id,
+            use_ha_session=use_ha_session,
+            log_info=log_info,
+            domain_key=DOMAIN,
+        )
+    except ConfigEntryNotReady:
+        return True
 
     if not client.has_devices:
         _LOGGER.error("No ThinQ devices found. Component setup aborted")
@@ -132,13 +146,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             client,
             snapshot_manager=snapshot_manager,
         )
-    except Exception as exc:
+    except Exception:  # noqa: BLE001
         if log_info:
             _LOGGER.warning(
                 "Connection not available. ThinQ platform not ready", exc_info=True
             )
         await client.close()
-        raise ConfigEntryNotReady("ThinQ platform not ready") from exc
+        return True
 
     # remove device not available anymore
     dev_ids = [v for ids in discovered_devices.values() for v in ids]
@@ -167,7 +181,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         snapshot_manager=snapshot_manager,
         domain_data=domain_data,
     )
-    await hass.config_entries.async_forward_entry_setups(entry, SMARTTHINQ_PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(
+        entry,
+        [platform for platform in SMARTTHINQ_PLATFORMS if platform != Platform.NUMBER],
+    )
     try:
         def _schedule_devices_changed_refresh() -> None:
             hass.async_create_task(
@@ -200,11 +217,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+async def _options_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Apply options changes to running coordinators."""
+    new_interval = int(entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL))
+    domain_data = get_domain_data(hass)
+    if domain_data.get(CONF_SCAN_INTERVAL) == new_interval:
+        return
+
+    domain_data[CONF_SCAN_INTERVAL] = new_interval
+    interval_delta = timedelta(seconds=new_interval)
+    for devices in domain_data.get(LGE_DEVICES, {}).values():
+        for lge_device in devices:
+            coordinator = getattr(lge_device, "_coordinator", None)
+            if coordinator is None:
+                continue
+            if hasattr(coordinator, "set_base_polling_interval"):
+                coordinator.set_base_polling_interval(interval_delta)
+            else:
+                coordinator.update_interval = interval_delta
+                if coordinator.data is not None:
+                    coordinator.async_set_updated_data(coordinator.data)
+    _LOGGER.info("ThinQ scan interval updated to %d seconds", new_interval)
+
+
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    if unload_ok := await hass.config_entries.async_unload_platforms(
-        entry, SMARTTHINQ_PLATFORMS
-    ):
+    lg_loaded = CLIENT in hass.data.get(DOMAIN, {})
+    platforms = SMARTTHINQ_PLATFORMS if lg_loaded else [Platform.NUMBER]
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, platforms):
         client = await async_unload_runtime_data(hass)
         if client is not None:
             await client.close()

@@ -16,9 +16,11 @@ from homeassistant.config_entries import (
     CONN_CLASS_CLOUD_POLL,
     SOURCE_REAUTH,
     SOURCE_RECONFIGURE,
+    ConfigEntry,
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
+    OptionsFlow,
 )
 from homeassistant.const import (
     CONF_BASE,
@@ -32,6 +34,9 @@ from homeassistant.const import (
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.selector import (
+    NumberSelector,
+    NumberSelectorConfig,
+    NumberSelectorMode,
     SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
@@ -47,10 +52,14 @@ from .const import (
     CONF_OAUTH2_URL,
     CONF_OFFICIAL_CLIENT_ID,
     CONF_OFFICIAL_PAT,
+    CONF_SCAN_INTERVAL,
     CONF_USE_API_V2,
     CONF_USE_HA_SESSION,
     CONF_USE_REDIRECT,
+    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    MAX_SCAN_INTERVAL,
+    MIN_SCAN_INTERVAL,
     OFFICIAL_CLIENT_PREFIX,
     __min_ha_version__,
 )
@@ -98,6 +107,12 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
     CONNECTION_CLASS = CONN_CLASS_CLOUD_POLL
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Return the options flow handler."""
+        return SmartThinQOptionsFlowHandler()
 
     def __init__(self) -> None:
         """Initialize flow."""
@@ -459,6 +474,7 @@ class SmartThinQFlowHandler(ConfigFlow, domain=DOMAIN):
 
         return self.async_create_entry(title="LGE Devices", data=data)
 
+
     @callback
     def _prepare_form_schema(self, step_id: str = "user") -> vol.Schema:
         """Prepare the user forms schema."""
@@ -573,3 +589,32 @@ def _dict_to_select(opt_dict: dict[str, str]) -> SelectSelectorConfig:
         options=[SelectOptionDict(value=str(k), label=v) for k, v in opt_dict.items()],
         mode=SelectSelectorMode.DROPDOWN,
     )
+
+
+class SmartThinQOptionsFlowHandler(OptionsFlow):
+    """Handle the SmartThinQ options flow."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage SmartThinQ options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        current = self.config_entry.options.get(
+            CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+        )
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_SCAN_INTERVAL, default=current): NumberSelector(
+                    NumberSelectorConfig(
+                        min=MIN_SCAN_INTERVAL,
+                        max=MAX_SCAN_INTERVAL,
+                        step=1,
+                        mode=NumberSelectorMode.BOX,
+                        unit_of_measurement="s",
+                    )
+                ),
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)

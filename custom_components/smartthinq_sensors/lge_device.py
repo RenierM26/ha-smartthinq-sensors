@@ -12,7 +12,12 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util.dt import utcnow
 
-from .const import DOMAIN, SIGNAL_RELOAD_ENTRY
+from .const import (
+    CONF_SCAN_INTERVAL,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    SIGNAL_RELOAD_ENTRY,
+)
 from .coordinator_hybrid import HybridDataCoordinator
 from .runtime_data import (
     get_capability_registry,
@@ -29,7 +34,6 @@ from .wideq.core_exceptions import (
 from .wideq.device import Device as ThinQDevice
 
 MAX_DISC_COUNT = 4
-SCAN_INTERVAL = timedelta(seconds=30)
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -537,6 +541,13 @@ class LGEDevice:
         """Get the coordinator for a specific device."""
         capability_registry = get_capability_registry(self._hass)
         data_source_router = get_data_source_router(self._hass)
+        scan_interval = timedelta(
+            seconds=int(
+                self._hass.data.get(DOMAIN, {}).get(
+                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                )
+            )
+        )
         coordinator: DataUpdateCoordinator[Any]
 
         if capability_registry is not None and data_source_router is not None:
@@ -555,9 +566,9 @@ class LGEDevice:
                 update_method=self._async_update,
                 capability_registry=capability_registry,
                 data_source_router=data_source_router,
-                base_polling_interval=SCAN_INTERVAL,
+                base_polling_interval=scan_interval,
                 mqtt_healthy_interval=timedelta(seconds=90),
-                mqtt_unhealthy_interval=SCAN_INTERVAL,
+                mqtt_unhealthy_interval=scan_interval,
             )
             get_hybrid_coordinators(self._hass)[self._device_id] = coordinator
         else:
@@ -566,7 +577,7 @@ class LGEDevice:
                 _LOGGER,
                 name=f"{DOMAIN}-{self._name}",
                 update_method=self._async_update,
-                update_interval=SCAN_INTERVAL,
+                update_interval=scan_interval,
             )
         await coordinator.async_refresh()
         self._coordinator = coordinator

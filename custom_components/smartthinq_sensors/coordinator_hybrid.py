@@ -390,6 +390,15 @@ class HybridDataCoordinator(DataUpdateCoordinator):
         self._current_polling_interval = new_interval
         self.update_interval = new_interval
 
+    @callback
+    def set_base_polling_interval(self, interval: timedelta) -> None:
+        """Update the community polling interval used when MQTT is unhealthy."""
+        self._base_polling_interval = interval
+        self._mqtt_unhealthy_interval = interval
+        self._update_polling_interval()
+        if self.data is not None:
+            self.async_set_updated_data(self.data)
+
     async def async_refresh(
         self,
         log_failures: bool = True,
